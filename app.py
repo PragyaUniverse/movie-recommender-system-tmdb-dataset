@@ -50,4 +50,4 @@ def recommend_api():
     return jsonify({"recommendations": recommend(movie)})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=10000)

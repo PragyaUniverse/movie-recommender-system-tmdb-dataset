@@ -1,8 +1,10 @@
+import os
 import pickle
-import json
 
-movies = pickle.load(open('movie_list.pkl', 'rb'))
-similarity = pickle.load(open('similarity.pkl', 'rb'))
+BASE_DIR = os.path.dirname(__file__)
+
+movies = pickle.load(open(os.path.join(BASE_DIR, '../movie_list.pkl'), 'rb'))
+similarity = pickle.load(open(os.path.join(BASE_DIR, '../similarity.pkl'), 'rb'))
 
 def recommend(movie):
     movie_index = movies[movies['title'] == movie].index[0]

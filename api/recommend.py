@@ -1,5 +1,6 @@
 import os
 import pickle
+import json
 
 BASE_DIR = os.path.dirname(__file__)
 
@@ -7,15 +8,27 @@ movies = pickle.load(open(os.path.join(BASE_DIR, '../movie_list.pkl'), 'rb'))
 similarity = pickle.load(open(os.path.join(BASE_DIR, '../similarity.pkl'), 'rb'))
 
 def recommend(movie):
-    movie_index = movies[movies['title'] == movie].index[0]
-    distances = similarity[movie_index]
-    movies_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:6]
+    # make search case-insensitive
+    movie = movie.lower()
 
-    recommended = []
-    for i in movies_list:
-        recommended.append(movies.iloc[i[0]].title)
+    matches = movies[movies['title'].str.lower() == movie]
+
+    if matches.empty:
+        return None
+
+    movie_index = matches.index[0]
+    distances = similarity[movie_index]
+
+    movies_list = sorted(
+        list(enumerate(distances)),
+        key=lambda x: x[1],
+        reverse=True
+    )[1:6]
+
+    recommended = [movies.iloc[i[0]].title for i in movies_list]
 
     return recommended
+
 
 def handler(request):
     movie = request.args.get("movie")
@@ -26,14 +39,15 @@ def handler(request):
             "body": json.dumps({"error": "Enter a movie"})
         }
 
-    try:
-        recs = recommend(movie)
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"recommendations": recs})
-        }
-    except:
+    recs = recommend(movie)
+
+    if recs is None:
         return {
             "statusCode": 404,
             "body": json.dumps({"error": "Movie not found"})
         }
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps({"recommendations": recs})
+    }

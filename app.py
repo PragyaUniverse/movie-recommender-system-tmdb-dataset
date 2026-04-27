@@ -1,53 +1,26 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pickle
-import requests
 
 app = Flask(__name__)
 CORS(app)
 
-movies = pickle.load(open('movie_list.pkl','rb'))
-similarity = pickle.load(open('similarity.pkl','rb'))
+new = pickle.load(open('movie_list.pkl', 'rb'))
+similarity = pickle.load(open('similarity.pkl', 'rb'))
 
-API_KEY = "YOUR_API_KEY"
-
-def fetch_poster(title):
-    url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={title}"
-    data = requests.get(url).json()
-
-    if data['results']:
-        poster = data['results'][0].get('poster_path')
-        if poster:
-            return "https://image.tmdb.org/t/p/w500" + poster
-
-    return "https://via.placeholder.com/300x450"
-
-def recommend(movie):
+@app.route('/recommend')
+def recommend():
+    movie = request.args.get('movie')
     try:
-        index = movies[movies['title'] == movie].index[0]
+        index = new[new['title'] == movie].index[0]
+        distances = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda x: x[1])
+        return jsonify([{"t": new.iloc[i[0]].title, "s": round(float(v)*100)} for i,v in [(d, d[1]) for d in distances[1:6]]])
     except:
-        return []
+        return jsonify([]), 404
 
-    distances = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda x: x[1])
+@app.route('/movies')
+def movies():
+    return jsonify(new['title'].tolist())
 
-    result = []
-    for i in distances[1:6]:
-        title = movies.iloc[i[0]].title
-        result.append({
-            "title": title,
-            "poster": fetch_poster(title)
-        })
-
-    return result
-
-@app.route('/')
-def home():
-    return render_template("index.html")
-
-@app.route('/recommend', methods=['POST'])
-def recommend_api():
-    movie = request.json['movie']
-    return jsonify({"recommendations": recommend(movie)})
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+if __name__ == '__main__':
+    app.run(port=5000)
